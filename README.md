@@ -26,7 +26,7 @@ npm run dev
 ### 其他命令
 
 ```bash
-npm test            # 运行规划引擎与协同同步单元测试（vitest，82 项）
+npm test            # 运行规划引擎与协同同步单元测试（vitest，120 项）
 npm run build       # 类型检查 + 生产构建（输出 dist/）
 npm run preview     # 预览生产构建（http://localhost:4173）
 ```
@@ -54,6 +54,16 @@ npm run preview     # 预览生产构建（http://localhost:4173）
 - 计算时 /0～/30 自动排除网络地址与广播地址，/31、/32 沿用可用主机规则（不额外排除）；
 - 重叠或相邻的排除区间先合并，再以区间运算（非逐地址枚举）扣除，输出**最少数量**的「起始 IP - 结束 IP」连续范围；
 - 结果可**一键复制**；该操作为纯本地计算，不修改规划、不产生历史记录。
+
+### 生成反向 DNS 委派片段
+- 分配清单中每个**子网**行提供「反向 DNS」操作，弹窗内逐行填写权威 NS（**/32 可留空**）；
+- 非空 NS 必须是**带末尾点的绝对域名**（如 `ns1.example.com.`）；任一行非法时逐条列出错误（带行号），且不生成结果；
+- 按子网前缀生成可复制的 BIND 委派片段：
+  - `/0`、`/8`、`/16`、`/24`：生成**单个 in-addr.arpa 区**；
+  - 其余 `/1`～`/23`：拆分为**下一个八位边界**（/8、/16 或 /24）上的**最小区域集合**；
+  - `/25`～`/31`：按 **RFC 2317** 生成父区 NS 委派、覆盖子网全部地址的 CNAME 与子区名（`起始-结束` 形式，如 `0-127.1.168.192.in-addr.arpa.`）；
+  - `/32`：生成**单条 PTR 所有者提示**（在所在 /24 父区中添加 PTR 记录）；
+- 结果按**数值地址升序**，**父区记录**与**需创建的子区**分段展示，可**一键复制**；该操作为纯本地计算，不修改规划、不产生历史记录。
 
 ### 前缀策略校验
 - 工具栏「**前缀策略校验**」入口打开弹窗，对当前所有**子网分配**（`kind = subnet`，命名保留段不参与）有序执行一段 prefix-list，模拟设备上的 `ip prefix-list` 放行/拒绝判定；
@@ -119,16 +129,18 @@ npm run preview     # 预览生产构建（http://localhost:4173）
 │   ├── lib/
 │   │   ├── ip.ts           # CIDR 解析/对齐/容量/扣除/伙伴合并（基于 ipaddr.js）
 │   │   ├── dhcp.ts         # DHCP 地址池：排除项解析校验、区间合并与扣除
+│   │   ├── reverseDns.ts   # 反向 DNS：NS 校验、in-addr.arpa 区计算、RFC 2317 委派片段
 │   │   ├── prefixPolicy.ts # 前缀策略：prefix-list 规则解析、有序命中判定、文本报告
 │   │   ├── model.ts        # 数据模型、校验、JSON 导入导出
 │   │   ├── planner.ts      # 最低可用地址分配、迁移预演、地址空间树
 │   │   ├── revisionStore.ts # 修订图：localStorage 持久化、BroadcastChannel 同步、分叉/合并判定
 │   │   ├── ip.test.ts      # 引擎单元测试
 │   │   ├── dhcp.test.ts
+│   │   ├── reverseDns.test.ts
 │   │   ├── prefixPolicy.test.ts
 │   │   ├── planner.test.ts
 │   │   └── revisionStore.test.ts
-│   ├── components/         # 工具栏、根网段、树视图、分配清单、迁移预演/DHCP 池/前缀策略弹窗等
+│   ├── components/         # 工具栏、根网段、树视图、分配清单、迁移预演/DHCP 池/前缀策略/反向 DNS 弹窗等
 │   ├── App.tsx             # 状态与历史栈（撤销/重做）、迁移流程编排
 │   └── main.tsx
 └── package.json

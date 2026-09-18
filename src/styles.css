@@ -545,6 +545,12 @@ tr.policy-permit td {
   color: #a8c4ff;
 }
 
+.rdns-section-title {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 10px 0 4px;
+}
+
 /* ---- 提示条 ---- */
 .toast {
   position: fixed;
